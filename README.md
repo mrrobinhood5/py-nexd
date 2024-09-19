@@ -1,5 +1,7 @@
 # py-nexd
-Python port of ~m15o/nexd
+Unofficial Python port of [nexd](https://hg.sr.ht/~m15o/nexd)[]()
+
+[NEX Protocol Specification](https://nightfall.city/nex/info/specification.txt)
 
 You can pass a directory to serve files
 
@@ -17,6 +19,8 @@ then make it executable
 ```sh
 chmod u+x py-nexd.py
 ```
+
+it will serve `index` files by default, or list directory contents as links
 
 This is a work in progress. Will add more functionality as I need it. 
 
