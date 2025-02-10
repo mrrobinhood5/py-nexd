@@ -1,13 +1,18 @@
+import argparse
 import socket
 import os
+import pathlib
 import logging
 
+
+# TODO: add better arg management to allow binding to localhost instead of 0.0.0.0
 class Handler:
     def __init__(self, base_path):
         self.base_path = base_path
         self.index_files = ['index']
 
     def handle(self, req, conn):
+        print(f"Request: {req}")
         req = '.' + req
         req_path = os.path.join(self.base_path, req)
 
@@ -57,13 +62,20 @@ def serve(handler, conn):
     finally:
         conn.close()
 
-def listen_and_serve(handler):
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+
+def listen_and_serve(handler, use_ipv6=False):
+    address_family = socket.AF_INET6 if use_ipv6 else socket.AF_INET
+    with socket.socket(address_family, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        s.bind(('0.0.0.0', 1900))
+
+        bind_address = ('::', 1900) if use_ipv6 else ('0.0.0.0', 1900)
+        s.bind((bind_address))
+
         s.listen()
 
-        logging.info("Server listening on port 1900")
+        log_address = "[::]" if use_ipv6 else "0.0.0.0"
+        logging.info(f"""Server listening on {
+                     log_address}:1900 (IPv6: {use_ipv6})""")
 
         while True:
             conn, addr = s.accept()
@@ -72,16 +84,28 @@ def listen_and_serve(handler):
 
 
 def main():
-    # TODO: add better arg management to allow binding to localhost instead of 0.0.0.0
-    if len(os.sys.argv) < 2:
-        logging.info("usage: python3 script.py path")
-        logging.info("No path provided, serving $PWD")
-        base_path = os.getcwd()
-    else:
-        base_path = os.sys.argv[1]
+    parser = argparse.ArgumentParser(
+        description="Unofficial Python port of nexd by m15o")
+    parser.add_argument("path", type=pathlib.Path,
+                        help="Path of directory to serve")
+    parser.add_argument("--ipv6", action="store_true",
+                        help="Binds to IPv6 instead")
+    args = parser.parse_args()
 
-    handler = Handler(base_path)
-    listen_and_serve(handler)
+    if not args.path.exists():
+        logging.error(f"Path does not exists: {args.path}")
+        exit(1)
+
+    if not args.path.is_dir():
+        logging.error(f"Path is not a directory: {args.path}")
+        exit(1)
+
+    print("Path:", args.path)
+    print("IPv6:", args.ipv6)
+
+    handler = Handler(args.path)
+    listen_and_serve(handler, args.ipv6)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
